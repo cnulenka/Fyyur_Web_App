@@ -42,6 +42,7 @@ class Venue(db.Model):
     facebook_link = db.Column(db.String(120))
     seeking_talent = db.Column(db.Boolean)
     seeking_description = db.Column(db.String(500))
+    genres = db.Column(db.String(120))
     shows = db.relationship('Show', backref="venue", lazy=True)
 
 class Artist(db.Model):
@@ -98,8 +99,6 @@ def index():
 
 @app.route('/venues')
 def venues():
-  # TODO: replace with real venues data.
-  #       num_shows should be aggregated based on number of upcoming shows per venue.
   data=[{
     "city": "San Francisco",
     "state": "CA",
