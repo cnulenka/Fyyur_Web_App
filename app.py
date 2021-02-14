@@ -5,7 +5,7 @@
 import json
 import dateutil.parser
 import babel
-from flask import Flask, render_template, request, Response, flash, redirect, url_for
+from flask import Flask, render_template, request, Response, flash, redirect, url_for, abort
 from flask_moment import Moment
 from flask_sqlalchemy import SQLAlchemy
 import logging
@@ -153,8 +153,7 @@ def search_venues():
 def show_venue(venue_id):
   venue = Venue.query.filter(Venue.id == venue_id).one_or_none()
   if venue is None:
-    #abort(404)
-    render_template('errors/404.html')
+    abort(404)
 
   response = {
               "id": venue.id,
@@ -216,7 +215,7 @@ def create_venue_submission():
     error = True
     flash('Incomplete input. Venue could not be listed.')
     print(e)
-    return render_template('errors/500.html')
+    abort(500)
 
   try:
     new_venue = Venue(name = name, city = city, state = state,
@@ -243,8 +242,7 @@ def delete_venue(venue_id):
   try:
     venue = Venue.query.filter(Venue.id == venue_id).one_or_none()
     if venue is None:
-      #abort(404)
-      render_template('errors/404.html')
+      abort(404)
 
     venue.delete()
     db.session.commit()
@@ -294,8 +292,7 @@ def search_artists():
 def show_artist(artist_id):
   artist = Artist.query.filter(Artist.id == artist_id).one_or_none()
   if artist is None:
-    #abort(404)
-    render_template('errors/404.html')
+    abort(404)
 
   response = {
               "id": artist.id,
@@ -339,8 +336,7 @@ def edit_artist(artist_id):
   form = ArtistForm()
   artist = Artist.query.filter(Artist.id == artist_id).one_or_none()
   if artist is None:
-    #abort(404)
-    render_template('errors/404.html')
+    abort(404)
 
   response = {
               "id": artist.id,
@@ -364,8 +360,8 @@ def edit_artist_submission(artist_id):
   error = False
   artist = Artist.query.filter(Artist.id == artist_id).one_or_none()
   if artist is None:
-    #abort(404)
-    render_template('errors/404.html')
+    abort(404)
+
   try:
     print(request.form)
     name = request.form["name"]
@@ -378,7 +374,7 @@ def edit_artist_submission(artist_id):
     error = True
     flash('Incomplete input. Artist could not be listed.')
     print(e)
-    return render_template('errors/500.html')
+    abort(500)
 
   try:
     artist.name = name
@@ -407,8 +403,7 @@ def edit_venue(venue_id):
   form = VenueForm()
   venue = Venue.query.filter(Venue.id == venue_id).one_or_none()
   if venue is None:
-    #abort(404)
-    render_template('errors/404.html')
+    abort(404)
 
   response = {
               "id": venue.id,
@@ -431,8 +426,8 @@ def edit_venue_submission(venue_id):
   form = VenueForm()
   venue = Venue.query.filter(Venue.id == venue_id).one_or_none()
   if venue is None:
-    #abort(404)
-    render_template('errors/404.html')
+    abort(404)
+
   error = False
   try:
     print(request.form)
@@ -447,7 +442,7 @@ def edit_venue_submission(venue_id):
     error = True
     flash('Incomplete input. Venue could not be listed.')
     print(e)
-    return render_template('errors/500.html')
+    abort(500)
 
   try:
     venue.name = name
@@ -495,7 +490,7 @@ def create_artist_submission():
     error = True
     flash('Incomplete input. Artist could not be listed.')
     print(e)
-    return render_template('errors/500.html')
+    abort(500)
 
   try:
     new_artist = Artist(name = name, city = city, state = state,
@@ -525,61 +520,65 @@ def shows():
   # displays list of shows at /shows
   # TODO: replace with real venues data.
   #       num_shows should be aggregated based on number of upcoming shows per venue.
-  data=[{
-    "venue_id": 1,
-    "venue_name": "The Musical Hop",
-    "artist_id": 4,
-    "artist_name": "Guns N Petals",
-    "artist_image_link": "https://images.unsplash.com/photo-1549213783-8284d0336c4f?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=300&q=80",
-    "start_time": "2019-05-21T21:30:00.000Z"
-  }, {
-    "venue_id": 3,
-    "venue_name": "Park Square Live Music & Coffee",
-    "artist_id": 5,
-    "artist_name": "Matt Quevedo",
-    "artist_image_link": "https://images.unsplash.com/photo-1495223153807-b916f75de8c5?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=334&q=80",
-    "start_time": "2019-06-15T23:00:00.000Z"
-  }, {
-    "venue_id": 3,
-    "venue_name": "Park Square Live Music & Coffee",
-    "artist_id": 6,
-    "artist_name": "The Wild Sax Band",
-    "artist_image_link": "https://images.unsplash.com/photo-1558369981-f9ca78462e61?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=794&q=80",
-    "start_time": "2035-04-01T20:00:00.000Z"
-  }, {
-    "venue_id": 3,
-    "venue_name": "Park Square Live Music & Coffee",
-    "artist_id": 6,
-    "artist_name": "The Wild Sax Band",
-    "artist_image_link": "https://images.unsplash.com/photo-1558369981-f9ca78462e61?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=794&q=80",
-    "start_time": "2035-04-08T20:00:00.000Z"
-  }, {
-    "venue_id": 3,
-    "venue_name": "Park Square Live Music & Coffee",
-    "artist_id": 6,
-    "artist_name": "The Wild Sax Band",
-    "artist_image_link": "https://images.unsplash.com/photo-1558369981-f9ca78462e61?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=794&q=80",
-    "start_time": "2035-04-15T20:00:00.000Z"
-  }]
-  return render_template('pages/shows.html', shows=data)
+  response = []
+  shows = Show.query.order_by(Show.venue_id)
+  for show in shows:
+    venue = Venue.query.get(show.artist_id)
+    artist = Artist.query.get(show.artist_id)
+    show_info = {
+      "venue_id": venue.id,
+      "venue_name": venue.name,
+      "artist_id": artist.id,
+      "artist_name": artist.name,
+      "artist_image_link": artist.image_link,
+      "start_time": show.start_time
+    }
+    response.append(show_info)
+
+  return render_template('pages/shows.html', shows=response)
 
 @app.route('/shows/create')
 def create_shows():
-  # renders form. do not touch.
   form = ShowForm()
   return render_template('forms/new_show.html', form=form)
 
 @app.route('/shows/create', methods=['POST'])
 def create_show_submission():
-  # called to create new shows in the db, upon submitting new show listing form
-  # TODO: insert form data as a new Show record in the db, instead
+  error = False
+  try:
+    print(request.form)
+    artist_id = request.form["artist_id"]
+    venue_id = request.form["venue_id"]
+  except KeyError as e:
+    error = True
+    flash('Incomplete input. Artist could not be listed.')
+    print(e)
+    abort(500)
 
-  # on successful db insert, flash success
-  flash('Show was successfully listed!')
-  # TODO: on unsuccessful db insert, flash an error instead.
-  # e.g., flash('An error occurred. Show could not be listed.')
-  # see: http://flask.pocoo.org/docs/1.0/patterns/flashing/
-  return render_template('pages/home.html')
+  #verify if artist and venue exits with input ids
+  if not error:
+    venue = Venue.query.filter(Venue.id == venue_id).one_or_none()
+    artist = Artist.query.filter(Artist.id == artist_id).one_or_none()
+    if venue is None or artist is None:
+      abort(404)
+  #insert a new show to db
+  try:
+    new_show = Artist(artist_id = artist_id, venue_id = venue_id)
+    db.session.add(new_show)
+    db.session.commit()
+  except Exception as e: 
+    error = True
+    flash('An error occurred. Show could not be listed.')
+    print(e)
+    db.session.rollback()
+  finally: 
+    db.session.close()
+
+  if not error:
+    flash('Show was successfully listed!')
+    return render_template('pages/home.html')
+  else:
+      render_template('errors/500.html')
 
 @app.errorhandler(404)
 def not_found_error(error):
