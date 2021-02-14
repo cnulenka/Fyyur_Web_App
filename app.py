@@ -45,11 +45,10 @@ class Venue(db.Model):
     facebook_link = db.Column(db.String(120))
     seeking_talent = db.Column(db.Boolean, default = False)
     genres = db.Column(db.String(120))
-    artists = db.relationship('Artist', secondary='shows',
-              backref=db.backref('venues', lazy=True))
     seeking_description = db.Column(db.String(500),
                           default = "We are on the lookout for a local artist to play every two weeks. Please call us.")
     website = db.Column(db.String(120), default = "")
+    shows = db.relationship('Show', backref="venue", lazy=True)
 
 class Artist(db.Model):
     __tablename__ = 'artists'
@@ -66,6 +65,7 @@ class Artist(db.Model):
     facebook_link = db.Column(db.String(120))
     seeking_venue = db.Column(db.Boolean, default = False)
     website = db.Column(db.String(120), default = "")
+    shows = db.relationship('Show', backref="artist", lazy=True)
 
 class Show(db.Model):
   __tablename__ = 'shows'
@@ -171,13 +171,12 @@ def show_venue(venue_id):
               "upcoming_shows_count": 0,
             }
 
-  shows_at_venue = Show.query.filter_by(venue_id=venue_id)
+  shows_at_venue = Show.query.join(Artist).filter(Show.venue_id==venue_id).all()
   for show in shows_at_venue:
-    show_artist = Artist.query.get(show.artist_id)
     show_info = {
-                  "artist_id": show_artist.id,
-                  "artist_name": show_artist.name,
-                  "artist_image_link": show_artist.image_link,
+                  "artist_id": show.artist.id,
+                  "artist_name": show.artist.name,
+                  "artist_image_link": show.artist.image_link,
                   "start_time": str(show.start_time),
                 }
     if show.start_time > datetime.datetime.now():
@@ -309,13 +308,12 @@ def show_artist(artist_id):
               "upcoming_shows_count": 0,
             }
 
-  shows_of_artist = Show.query.filter_by(artist_id=artist_id)
+  shows_of_artist = Show.query.join(Venue).filter(Show.artist_id==artist_id).all()
   for show in shows_of_artist:
-    show_venue = Venue.query.get(show.venue_id)
     show_info = {
-                  "venue_id": show_venue.id,
-                  "venue_name": show_venue.name,
-                  "venue_image_link": show_venue.image_link,
+                  "venue_id": show.venue.id,
+                  "venue_name": show.venue.name,
+                  "venue_image_link": show.venue.image_link,
                   "start_time": str(show.start_time),
                 }
     if show.start_time > datetime.datetime.now():
@@ -335,21 +333,17 @@ def edit_artist(artist_id):
   if artist is None:
     abort(404)
 
-  response = {
-              "id": artist.id,
-              "name": artist.name,
-              "genres": artist.genres.split(':'),
-              "city": artist.city,
-              "state": artist.state,
-              "phone": artist.phone,
-              "website": artist.website,
-              "facebook_link": artist.facebook_link,
-              "seeking_venue": artist.seeking_venue,
-              "seeking_description": artist.seeking_description,
-              "image_link": artist.image_link,
-            }
+  form.name.data = artist.name
+  form.genres.data = artist.genres.split(':')
+  form.city.data = artist.city
+  form.state.data = artist.state
+  form.phone.data = artist.phone
+  form.website.data = artist.website
+  form.facebook_link.data = artist.facebook_link
+  form.seeking_venue.data = artist.seeking_venue
+  form.seeking_description.data = artist.seeking_description
 
-  return render_template('forms/edit_artist.html', form=form, artist=response)
+  return render_template('forms/edit_artist.html', form=form, artist=artist)
 
 @app.route('/artists/<int:artist_id>/edit', methods=['POST'])
 def edit_artist_submission(artist_id):
@@ -514,20 +508,15 @@ def create_artist_submission():
 
 @app.route('/shows')
 def shows():
-  # displays list of shows at /shows
-  # TODO: replace with real venues data.
-  #       num_shows should be aggregated based on number of upcoming shows per venue.
   response = []
-  shows = Show.query.order_by(Show.venue_id)
+  shows = Show.query.join(Artist).join(Venue).order_by(Show.venue_id).all()
   for show in shows:
-    venue = Venue.query.get(show.venue_id)
-    artist = Artist.query.get(show.artist_id)
     show_info = {
-      "venue_id": venue.id,
-      "venue_name": venue.name,
-      "artist_id": artist.id,
-      "artist_name": artist.name,
-      "artist_image_link": artist.image_link,
+      "venue_id": show.venue.id,
+      "venue_name": show.venue.name,
+      "artist_id": show.artist.id,
+      "artist_name": show.artist.name,
+      "artist_image_link": show.artist.image_link,
       "start_time": str(show.start_time)
     }
     response.append(show_info)
