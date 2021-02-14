@@ -41,20 +41,14 @@ class Venue(db.Model):
     address = db.Column(db.String(120))
     phone = db.Column(db.String(120))
     image_link = db.Column(db.String(500),
-                default = "https://images.unsplash.com/\
-                photo-1507901747481-84a4f64fda6d?ixid=\
-                MXwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB\
-                8fHw%3D&ixlib=rb-1.2.1&auto=format&fit=\
-                crop&w=1050&q=80")
+                default = "https://images.unsplash.com/photo-1507901747481-84a4f64fda6d?ixid=MXwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHw%3D&ixlib=rb-1.2.1&auto=format&fit=crop&w=1050&q=80")
     facebook_link = db.Column(db.String(120))
     seeking_talent = db.Column(db.Boolean, default = False)
     genres = db.Column(db.String(120))
     artists = db.relationship('Artist', secondary='shows',
               backref=db.backref('venues', lazy=True))
     seeking_description = db.Column(db.String(500),
-                          default = "We are on the lookout \
-                            for a local artist to play every \
-                            two weeks. Please call us.")
+                          default = "We are on the lookout for a local artist to play every two weeks. Please call us.")
     website = db.Column(db.String(120), default = "")
 
 class Artist(db.Model):
@@ -66,13 +60,9 @@ class Artist(db.Model):
     state = db.Column(db.String(120))
     phone = db.Column(db.String(120))
     genres = db.Column(db.String(120))
-    seeking_description = db.Column(db.String(500), default = "Looking for \
-                         shows to perform at in the San Francisco Bay Area!")
+    seeking_description = db.Column(db.String(500), default = "Looking for shows to perform at in the San Francisco Bay Area!")
     image_link = db.Column(db.String(500),
-                      default = "https://images.unsplash.com/photo-1526218\
-                      626217-dc65a29bb444?ixid=MXwxMjA3fDB8MHxwaG90by1wYWd\
-                      lfHx8fGVufDB8fHw%3D&ixlib=rb-1.2.1&auto=format&fit=\
-                      crop&w=334&q=80")
+                      default = "https://images.unsplash.com/photo-1526218626217-dc65a29bb444?ixid=MXwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHw%3D&ixlib=rb-1.2.1&auto=format&fit=crop&w=334&q=80")
     facebook_link = db.Column(db.String(120))
     seeking_venue = db.Column(db.Boolean, default = False)
     website = db.Column(db.String(120), default = "")
@@ -243,7 +233,7 @@ def create_venue_submission():
     db.session.close()
 
   if not error:
-    flash('Venue ' + request.form['name'] + ' was successfully listed!')
+    flash('Venue ' + name + ' was successfully listed!')
     return render_template('pages/home.html')
   else:
       render_template('errors/500.html')
@@ -261,7 +251,7 @@ def delete_venue(venue_id):
     flash("Venue: " + venue.name + " was successfully deleted.")
   except Exception as e:
     db.session.rollback()
-    flash("Something went wrong. Venue: " + venue.name + " was could not be deleted.")
+    flash("An error occurred. Venue: " + venue.name + " was could not be deleted.")
     print(e)
     abort(422)
   finally:
@@ -275,7 +265,7 @@ def artists():
   formatted_artist = []
   artists = Artist.query.options(load_only(*["id", "name"])).all()
   for artist in artists:
-    data.append({"id":artist.id, "name": artist.name})
+    formatted_artist.append({"id":artist.id, "name": artist.name})
   return render_template('pages/artists.html', artists=formatted_artist)
 
 @app.route('/artists/search', methods=['POST'])
@@ -311,7 +301,6 @@ def show_artist(artist_id):
               "id": artist.id,
               "name": artist.name,
               "genres": artist.genres.split(':'),
-              "address": artist.address,
               "city": artist.city,
               "state": artist.state,
               "phone": artist.phone,
@@ -407,15 +396,39 @@ def create_artist_form():
 
 @app.route('/artists/create', methods=['POST'])
 def create_artist_submission():
-  # called upon submitting the new artist listing form
-  # TODO: insert form data as a new Venue record in the db, instead
-  # TODO: modify data to be the data object returned from db insertion
+  error = False
+  try:
+    print(request.form)
+    name = request.form["name"]
+    city = request.form["city"]
+    state = request.form["state"]
+    phone = request.form["phone"]
+    genres = ":".join(request.form.getlist("genres"))
+    facebook_link = request.form["facebook_link"]
+  except KeyError as e:
+    error = True
+    flash('Incomplete input. Artist could not be listed.')
+    print(e)
+    return render_template('errors/500.html')
 
-  # on successful db insert, flash success
-  flash('Artist ' + request.form['name'] + ' was successfully listed!')
-  # TODO: on unsuccessful db insert, flash an error instead.
-  # e.g., flash('An error occurred. Artist ' + data.name + ' could not be listed.')
-  return render_template('pages/home.html')
+  try:
+    new_artist = Artist(name = name, city = city, state = state,
+        phone = phone, genres = genres, facebook_link = facebook_link)
+    db.session.add(new_artist)
+    db.session.commit()
+  except Exception as e: 
+    error = True
+    flash('Internal error occurred. Artist ' + name + ' could not be listed.')
+    print(e)
+    db.session.rollback()
+  finally: 
+    db.session.close()
+
+  if not error:
+    flash('Artist ' + name + ' was successfully listed!')
+    return render_template('pages/home.html')
+  else:
+      render_template('errors/500.html')
 
 
 #  Shows
