@@ -70,13 +70,10 @@ class Artist(db.Model):
 class Show(db.Model):
   __tablename__ = 'shows'
   
-  venue_id = db.Column(db.Integer, db.ForeignKey("venues.id"),
-                      primary_key=True)
-  artist_id = db.Column(db.Integer, db.ForeignKey("artists.id"),
-                        primary_key=True)
+  id = db.Column(db.Integer, primary_key=True)
+  venue_id = db.Column(db.Integer, db.ForeignKey("venues.id"),  nullable=False)
+  artist_id = db.Column(db.Integer, db.ForeignKey("artists.id"),  nullable=False)
   start_time = db.Column(db.DateTime, nullable=False)
-
-# TODO Implement Show and Artist models, and complete all model relationships and properties, as a database migration.
 
 #----------------------------------------------------------------------------#
 # Filters.
@@ -523,7 +520,7 @@ def shows():
   response = []
   shows = Show.query.order_by(Show.venue_id)
   for show in shows:
-    venue = Venue.query.get(show.artist_id)
+    venue = Venue.query.get(show.venue_id)
     artist = Artist.query.get(show.artist_id)
     show_info = {
       "venue_id": venue.id,
@@ -531,10 +528,9 @@ def shows():
       "artist_id": artist.id,
       "artist_name": artist.name,
       "artist_image_link": artist.image_link,
-      "start_time": show.start_time
+      "start_time": str(show.start_time)
     }
     response.append(show_info)
-
   return render_template('pages/shows.html', shows=response)
 
 @app.route('/shows/create')
@@ -547,8 +543,9 @@ def create_show_submission():
   error = False
   try:
     print(request.form)
-    artist_id = request.form["artist_id"]
-    venue_id = request.form["venue_id"]
+    artist_id = int(request.form["artist_id"])
+    venue_id = int(request.form["venue_id"])
+    start_time = request.form["start_time"]
   except KeyError as e:
     error = True
     flash('Incomplete input. Artist could not be listed.')
@@ -563,7 +560,8 @@ def create_show_submission():
       abort(404)
   #insert a new show to db
   try:
-    new_show = Artist(artist_id = artist_id, venue_id = venue_id)
+    new_show = Show(artist_id = artist_id, venue_id = venue_id,
+                    start_time = start_time)
     db.session.add(new_show)
     db.session.commit()
   except Exception as e: 
