@@ -270,7 +270,7 @@ def search_artists():
   if len(search_term)  > 0:
     search_results = (
         Artist.query.order_by(Artist.id)
-        .filter(Venue.name.ilike("%{}%".format(search_term)))
+        .filter(Artist.name.ilike("%{}%".format(search_term)))
         .options(load_only(*["id", "name"]))
         .all()
     )
