@@ -25,7 +25,6 @@ moment = Moment(app)
 app.config.from_object('config')
 db = SQLAlchemy(app)
 
-# TODO: connect to a local postgresql database
 migrate = Migrate(app,db)
 
 #----------------------------------------------------------------------------#
@@ -342,6 +341,7 @@ def edit_artist(artist_id):
   form.facebook_link.data = artist.facebook_link
   form.seeking_venue.data = artist.seeking_venue
   form.seeking_description.data = artist.seeking_description
+  form.image_link.data = artist.image_link
 
   return render_template('forms/edit_artist.html', form=form, artist=artist)
 
@@ -354,13 +354,17 @@ def edit_artist_submission(artist_id):
     abort(404)
 
   try:
-    print(request.form)
+    #print(request.form)
     name = request.form["name"]
     city = request.form["city"]
     state = request.form["state"]
     phone = request.form["phone"]
     genres = ":".join(request.form.getlist("genres"))
     facebook_link = request.form["facebook_link"]
+    image_link = request.form['image_link']
+    website = request.form['website']
+    seeking_venue = True if 'seeking_venue' in request.form else False
+    seeking_description = request.form['seeking_description']
   except KeyError as e:
     error = True
     flash('Incomplete input. Artist could not be listed.')
@@ -374,6 +378,10 @@ def edit_artist_submission(artist_id):
     artist.phone = phone
     artist.genres = genres
     artist.facebook_link = facebook_link
+    artist.website = website
+    artist.seeking_venue = seeking_venue
+    artist.image_link = image_link
+    artist.seeking_description = seeking_description
     db.session.commit()
   except Exception as e: 
     error = True
@@ -419,7 +427,7 @@ def edit_venue_submission(venue_id):
 
   error = False
   try:
-    print(request.form)
+    #print(request.form)
     name = request.form["name"]
     city = request.form["city"]
     state = request.form["state"]
@@ -427,6 +435,10 @@ def edit_venue_submission(venue_id):
     phone = request.form["phone"]
     genres = ":".join(request.form.getlist("genres"))
     facebook_link = request.form["facebook_link"]
+    image_link = request.form['image_link']
+    website = request.form['website']
+    seeking_talent = True if 'seeking_talent' in request.form else False
+    seeking_description = request.form['seeking_description']
   except KeyError as e:
     error = True
     flash('Incomplete input. Venue could not be listed.')
@@ -440,7 +452,11 @@ def edit_venue_submission(venue_id):
     venue.address = address
     venue.phone = phone
     venue.genres = genres
-    venue.facebook_link = facebook_link 
+    venue.facebook_link = facebook_link
+    venue.website = website
+    venue.seeking_talent = seeking_talent
+    venue.image_link = image_link
+    venue.seeking_description = seeking_description
     db.session.commit()
   except Exception as e: 
     error = True
