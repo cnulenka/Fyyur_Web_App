@@ -13,6 +13,9 @@ from logging import Formatter, FileHandler
 from flask_wtf import Form
 from forms import *
 from flask_migrate import Migrate
+from sqlalchemy import func
+from sqlalchemy.orm import load_only
+import datetime
 #----------------------------------------------------------------------------#
 # App Config.
 #----------------------------------------------------------------------------#
@@ -99,42 +102,50 @@ def index():
 
 @app.route('/venues')
 def venues():
-  data=[{
-    "city": "San Francisco",
-    "state": "CA",
-    "venues": [{
-      "id": 1,
-      "name": "The Musical Hop",
-      "num_upcoming_shows": 0,
-    }, {
-      "id": 3,
-      "name": "Park Square Live Music & Coffee",
-      "num_upcoming_shows": 1,
-    }]
-  }, {
-    "city": "New York",
-    "state": "NY",
-    "venues": [{
-      "id": 2,
-      "name": "The Dueling Pianos Bar",
-      "num_upcoming_shows": 0,
-    }]
-  }]
-  return render_template('pages/venues.html', areas=data);
+  distinct_location = Venue.query.distinct(Venue.city, Venue.state).all()
+  formatted_venues = []
+
+  for location in distinct_location:
+    venues_with_location = Venue.query.filter_by(state=location.state, city=location.city).all()
+    venue_data = []
+    for venue in venues_with_location:
+      venue_data.append({
+        "id": venue.id,
+        "name": venue.name, 
+        "num_upcoming_shows": len(Show.query.filter(Show.start_time > datetime.datetime.now(),
+                                  Show.venue_id == venue.id).all())
+      })
+    formatted_venues.append({
+      "city": location.city,
+      "state": location.state, 
+      "venues": venue_data
+    })
+
+  return render_template('pages/venues.html', areas=formatted_venues);
 
 @app.route('/venues/search', methods=['POST'])
 def search_venues():
   # TODO: implement search on artists with partial string search. Ensure it is case-insensitive.
   # seach for Hop should return "The Musical Hop".
   # search for "Music" should return "The Musical Hop" and "Park Square Live Music & Coffee"
-  response={
-    "count": 1,
-    "data": [{
-      "id": 2,
-      "name": "The Dueling Pianos Bar",
-      "num_upcoming_shows": 0,
-    }]
-  }
+  search_term=request.form.get('search_term', '')
+  search_results = []
+  if len(search_term)  > 0:
+    search_results = (
+        Venue.query.order_by(Venue.id)
+        .filter(Venue.name.ilike("%{}%".format(search_term)))
+        .options(load_only(*["id", "name"]))
+        .all()
+    )
+
+  response = {"count": len(search_results), "data": []}
+  for venue in search_results:
+    response["data"].append({
+        "id": venue.id,
+        "name": venue.name, 
+        "num_upcoming_shows": len(Show.query.filter(Show.start_time > datetime.datetime.now(),
+                                  Show.venue_id == venue.id).all())
+      })
   return render_template('pages/search_venues.html', results=response, search_term=request.form.get('search_term', ''))
 
 @app.route('/venues/<int:venue_id>')
@@ -243,21 +254,22 @@ def create_venue_submission():
     phone = request.form["phone"]
     genres = ":".join(request.form.getlist("genres"))
     facebook_link = request.form["facebook_link"]
-  except KeyError as error:
+  except KeyError as e:
     error = True
     flash('Incomplete input. Venue could not be listed.')
-    print(error)
+    print(e)
     return render_template('errors/500.html')
-  print("************parsed")
+
   try:
     new_venue = Venue(name = name, city = city, state = state,
         address = address, phone = phone, genres = genres,
         facebook_link = facebook_link)
     db.session.add(new_venue)
     db.session.commit()
-  except: 
+  except Exception as e: 
     error = True
     flash('Internal error occurred. Venue ' + name + ' could not be listed.')
+    print(e)
     db.session.rollback()
   finally: 
     db.session.close()
