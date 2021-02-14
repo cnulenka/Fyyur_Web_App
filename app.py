@@ -337,28 +337,70 @@ def show_artist(artist_id):
 @app.route('/artists/<int:artist_id>/edit', methods=['GET'])
 def edit_artist(artist_id):
   form = ArtistForm()
-  artist={
-    "id": 4,
-    "name": "Guns N Petals",
-    "genres": ["Rock n Roll"],
-    "city": "San Francisco",
-    "state": "CA",
-    "phone": "326-123-5000",
-    "website": "https://www.gunsnpetalsband.com",
-    "facebook_link": "https://www.facebook.com/GunsNPetals",
-    "seeking_venue": True,
-    "seeking_description": "Looking for shows to perform at in the San Francisco Bay Area!",
-    "image_link": "https://images.unsplash.com/photo-1549213783-8284d0336c4f?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=300&q=80"
-  }
-  # TODO: populate form with fields from artist with ID <artist_id>
-  return render_template('forms/edit_artist.html', form=form, artist=artist)
+  artist = Artist.query.filter(Artist.id == artist_id).one_or_none()
+  if artist is None:
+    #abort(404)
+    render_template('errors/404.html')
+
+  response = {
+              "id": artist.id,
+              "name": artist.name,
+              "genres": artist.genres.split(':'),
+              "city": artist.city,
+              "state": artist.state,
+              "phone": artist.phone,
+              "website": artist.website,
+              "facebook_link": artist.facebook_link,
+              "seeking_venue": artist.seeking_venue,
+              "seeking_description": artist.seeking_description,
+              "image_link": artist.image_link,
+            }
+
+  return render_template('forms/edit_artist.html', form=form, artist=response)
 
 @app.route('/artists/<int:artist_id>/edit', methods=['POST'])
 def edit_artist_submission(artist_id):
-  # TODO: take values from the form submitted, and update existing
-  # artist record with ID <artist_id> using the new attributes
+  form = ArtistForm()
+  error = False
+  artist = Artist.query.filter(Artist.id == artist_id).one_or_none()
+  if artist is None:
+    #abort(404)
+    render_template('errors/404.html')
+  try:
+    print(request.form)
+    name = request.form["name"]
+    city = request.form["city"]
+    state = request.form["state"]
+    phone = request.form["phone"]
+    genres = ":".join(request.form.getlist("genres"))
+    facebook_link = request.form["facebook_link"]
+  except KeyError as e:
+    error = True
+    flash('Incomplete input. Artist could not be listed.')
+    print(e)
+    return render_template('errors/500.html')
 
-  return redirect(url_for('show_artist', artist_id=artist_id))
+  try:
+    artist.name = name
+    artist.city = city
+    artist.state = state
+    artist.phone = phone
+    artist.genres = genres
+    artist.facebook_link = facebook_link
+    db.session.commit()
+  except Exception as e: 
+    error = True
+    flash('Internal error occurred. Artist ' + name + ' could not be updated.')
+    print(e)
+    db.session.rollback()
+  finally: 
+    db.session.close()
+
+  if not error:
+    flash('Artist ' + name + ' was successfully Updated!')
+    return redirect(url_for('show_artist', artist_id=artist_id))
+  else:
+      render_template('errors/500.html')
 
 @app.route('/venues/<int:venue_id>/edit', methods=['GET'])
 def edit_venue(venue_id):
